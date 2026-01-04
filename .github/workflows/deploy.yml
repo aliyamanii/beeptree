@@ -45,17 +45,10 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: |
-            .
-            !node_modules
-            !src
-            !.git
-            !.github
-            !.gitignore
-            !package.json
-            !package-lock.json
-            !tsconfig.json
-            !README.md
-            !LICENSE
+            index.html
+            styles.css
+            dist/
+          retention-days: 30
 
       - name: Deploy to GitHub Pages
         id: deployment
