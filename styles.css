@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
 
 :root {
     --primary: #6366f1;
@@ -34,6 +35,83 @@
     --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
+[data-theme="light"] {
+    /* Light mode */
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-tertiary: #e2e8f0;
+    --bg-card: #ffffff;
+    --bg-surface: rgba(255, 255, 255, 0.9);
+    
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    
+    --border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="light"] body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+}
+
+[data-theme="light"] body::before {
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+}
+
+[data-theme="light"] .theme-toggle {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .control-row input[type="number"] {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="light"] .control-row input[type="number"]:focus {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="light"] .canvas-container {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+[data-theme="light"] .controls {
+    background: rgba(241, 245, 249, 0.6);
+}
+
+[data-theme="light"] .step-controls {
+    background: rgba(99, 102, 241, 0.08);
+}
+
+[data-theme="light"] .explanation-panel {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="light"] #first-step-btn, 
+[data-theme="light"] #prev-step-btn, 
+[data-theme="light"] #next-step-btn, 
+[data-theme="light"] #last-step-btn {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="light"] #first-step-btn:hover, 
+[data-theme="light"] #prev-step-btn:hover, 
+[data-theme="light"] #next-step-btn:hover, 
+[data-theme="light"] #last-step-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -54,6 +132,10 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+[lang="fa"] body {
+    font-family: 'Vazirmatn', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 body::before {
@@ -107,6 +189,74 @@ header {
     border-bottom: 1px solid var(--border-color);
     position: relative;
     flex-shrink: 0;
+}
+
+.header-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.language-toggle {
+    width: 50px;
+    height: 40px;
+    border-radius: var(--border-radius-sm);
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-primary);
+}
+
+.language-toggle:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.language-toggle:active {
+    transform: scale(0.95);
+}
+
+[data-theme="light"] .language-toggle {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="light"] .language-toggle:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
 }
 
 header::after {

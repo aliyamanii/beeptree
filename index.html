@@ -9,43 +9,51 @@
 <body>
     <div class="container">
         <header>
+            <div class="header-controls">
+                <button id="language-toggle" class="language-toggle" aria-label="Toggle language">
+                    <span class="language-icon">EN</span>
+                </button>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
             <h1>B+ Tree Visual Simulator</h1>
             <p class="subtitle">Interactive visualization of B+ tree operations</p>
         </header>
 
         <div class="controls">
             <div class="control-row">
-                <label for="order-input">Order:</label>
-                <input type="number" id="order-input" min="3" value="4" placeholder="Min 3" />
-                <input type="number" id="value-input" placeholder="Enter value" />
-                <button id="insert-btn">Insert</button>
-                <button id="delete-btn">Delete</button>
-                <button id="search-btn">Search</button>
-                <button id="clear-btn">Clear</button>
-                <button id="random-btn">Random (10)</button>
+                <label for="order-input" data-i18n="treeOrder">Order:</label>
+                <input type="number" id="order-input" min="3" value="4" data-i18n-placeholder="orderPlaceholder" />
+                <input type="number" id="value-input" data-i18n-placeholder="enterValue" />
+                <button id="insert-btn" data-i18n="insert">Insert</button>
+                <button id="delete-btn" data-i18n="delete">Delete</button>
+                <button id="search-btn" data-i18n="search">Search</button>
+                <button id="clear-btn" data-i18n="clear">Clear</button>
+                <button id="random-btn"><span data-i18n="random">Random</span> <span data-i18n="randomCount">(10)</span></button>
             </div>
-            <div class="tip-text">
+            <div class="tip-text" data-i18n="tipText">
                 💡 Hold <strong>Shift</strong> while clicking Insert or Search for step-by-step mode
             </div>
         </div>
 
         <div class="step-controls" id="step-controls" style="display: none;">
             <div class="step-info">
-                <span id="step-counter">Step 0 of 0</span>
+                <span id="step-counter"><span data-i18n="step">Step</span> 0 <span data-i18n="of">of</span> 0</span>
             </div>
             <div class="step-buttons">
-                <button id="first-step-btn">⏮ First</button>
-                <button id="prev-step-btn">⏪ Previous</button>
-                <button id="play-pause-btn">▶ Play</button>
-                <button id="next-step-btn">Next ⏩</button>
-                <button id="last-step-btn">Last ⏭</button>
-                <button id="close-steps-btn">Close</button>
+                <button id="first-step-btn">⏮ <span data-i18n="first">First</span></button>
+                <button id="prev-step-btn">⏪ <span data-i18n="previous">Previous</span></button>
+                <button id="play-pause-btn">▶ <span data-i18n="play">Play</span></button>
+                <button id="next-step-btn"><span data-i18n="next">Next</span> ⏩</button>
+                <button id="last-step-btn"><span data-i18n="last">Last</span> ⏭</button>
+                <button id="close-steps-btn" data-i18n="close">Close</button>
             </div>
         </div>
 
         <div class="explanation-panel" id="explanation-panel" style="display: none;">
-            <h3>Step Explanation</h3>
-            <p id="explanation-text">No explanation available.</p>
+            <h3 data-i18n="stepExplanation">Step Explanation</h3>
+            <p id="explanation-text" data-i18n="noExplanationAvailable">No explanation available.</p>
         </div>
 
         <div class="canvas-container">

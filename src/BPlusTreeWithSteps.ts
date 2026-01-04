@@ -1,17 +1,24 @@
 import { BPlusTreeNode, BPlusTree } from './BPlusTree.js';
 import { StepTracker, OperationStep } from './StepTracker.js';
 import { TreeStateManager } from './TreeStateManager.js';
+import { Language, t } from './translations.js';
 
 export class BPlusTreeWithSteps extends BPlusTree {
     private stepTracker: StepTracker;
     private operationKey: number | null = null;
+    private language: Language = 'en';
 
-    constructor(order: number = 4, copyFrom?: BPlusTree) {
+    constructor(order: number = 4, copyFrom?: BPlusTree, language: Language = 'en') {
         super(order);
         this.stepTracker = new StepTracker();
+        this.language = language;
         if (copyFrom) {
             this.copyTree(copyFrom);
         }
+    }
+
+    setLanguage(language: Language): void {
+        this.language = language;
     }
 
     private copyTree(source: BPlusTree): void {
@@ -71,7 +78,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // Step 1: Starting search
         const state1 = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Starting insertion of key ${key}. Beginning search from root.`,
+            t('startingInsertion', this.language, { key: key.toString() }),
             this.root,
             key,
             [this.root],
@@ -85,7 +92,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         if (leaf.keys.includes(key)) {
             const state2 = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Key ${key} already exists in the tree. Insertion aborted.`,
+                t('keyAlreadyExists', this.language, { key: key.toString() }),
                 leaf,
                 key,
                 [leaf],
@@ -99,7 +106,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // Step 2: Found leaf, before insertion
         const state2 = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Found target leaf node with keys [${leaf.keys.join(', ')}]. Ready to insert key ${key}.`,
+            t('foundLeafBeforeInsertion', this.language, { keys: leaf.keys.join(', '), key: key.toString() }),
             leaf,
             key,
             [leaf],
@@ -112,7 +119,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         this.insertIntoLeaf(leaf, key);
         const state3 = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Key ${key} inserted into leaf. Current keys: [${leaf.keys.join(', ')}]. Checking if split is needed...`,
+            t('insertingIntoLeaf', this.language, { key: key.toString() }) + ' ' + t('checkingIfSplitNeeded', this.language),
             leaf,
             key,
             [leaf],
@@ -125,7 +132,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Step 4: Before split
             const state4 = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Leaf node is full (${leaf.keys.length} keys, max ${this.order - 1}). Splitting leaf node...`,
+                t('leafNodeFull', this.language, { count: leaf.keys.length.toString(), max: (this.order - 1).toString() }),
                 leaf,
                 key,
                 [leaf],
@@ -137,7 +144,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         } else {
             const state4 = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Leaf node has ${leaf.keys.length} keys (within limit). Insertion complete!`,
+                t('internalNodeHasKeys', this.language, { count: leaf.keys.length.toString() }) + ' ' + t('withinLimit', this.language) + ' ' + t('insertionComplete', this.language),
                 leaf,
                 key,
                 [leaf],
@@ -178,8 +185,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 comparisonText += `Comparing ${key} < ${node.keys[i]} → true. `;
             }
             
+            const childDesc = i === 0 ? t('leftmost', this.language) : t('afterKey', this.language, { key: node.keys[i - 1].toString() });
             this.stepTracker.addStep(
-                `At internal node. ${comparisonText}Following child pointer ${i} (${i === 0 ? 'leftmost' : `after key ${node.keys[i - 1]}`}).`,
+                t('atInternalNode', this.language, { keys: node.keys.join(', ') }) + '. ' + comparisonText + t('followingChild', this.language, { index: i.toString() }) + ' (' + childDesc + ').',
                 node,
                 key,
                 [node],
@@ -193,7 +201,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // Check if key exists in leaf
         if (node.keys.includes(key)) {
             this.stepTracker.addStep(
-                `Reached leaf node. Key ${key} found! Search successful.`,
+                t('reachedLeafNode', this.language, { keys: node.keys.join(', ') }) + '. ' + t('keyFound', this.language, { key: key.toString() }) + '! ' + t('searchSuccessful', this.language) + '.',
                 node,
                 key,
                 [node],
@@ -201,7 +209,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             );
         } else {
             this.stepTracker.addStep(
-                `Reached leaf node. Key ${key} not found in keys [${node.keys.join(', ')}]. Search unsuccessful.`,
+                t('reachedLeafNode', this.language, { keys: node.keys.join(', ') }) + '. ' + t('keyNotFound', this.language, { key: key.toString(), keys: node.keys.join(', ') }) + '. ' + t('searchUnsuccessful', this.language) + '.',
                 node,
                 key,
                 [node],
@@ -223,7 +231,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             
             const state = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `At internal node with keys [${node.keys.join(', ')}]. Comparing ${key} with keys. Following child ${i}.`,
+                t('atInternalNode', this.language, { keys: node.keys.join(', ') }) + '. ' + t('comparing', this.language, { key: key.toString() }) + '. ' + t('followingChild', this.language, { index: i.toString() }) + '.',
                 node,
                 key,
                 [node],
@@ -237,7 +245,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         
         const state = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Reached leaf node with keys [${node.keys.join(', ')}].`,
+            t('reachedLeafNode', this.language, { keys: node.keys.join(', ') }),
             node,
             key,
             [node],
@@ -274,7 +282,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // After split, before promoting - both nodes should now be in the tree
         const stateAfterSplit = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Split leaf node. Left node: [${leaf.keys.join(', ')}], Right node: [${newLeaf.keys.join(', ')}]. Promoting key ${promoteKey} to parent.`,
+            t('splittingLeafNode', this.language, { left: leaf.keys.join(', '), right: newLeaf.keys.join(', '), key: promoteKey.toString() }),
             null,
             promoteKey,
             [leaf, newLeaf],
@@ -306,7 +314,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Capture state with newLeaf still in parent's children (so it's visible in the tree)
             const stateBeforePromote = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Inserting promoted key ${promoteKey} into parent node with keys [${leaf.parent.keys.join(', ')}].`,
+                t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: leaf.parent.keys.join(', ') }),
                 leaf.parent,
                 promoteKey,
                 [leaf.parent, leaf, newLeaf],
@@ -346,7 +354,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // Before insertion - rightChild should now be in the tree
         const stateBefore = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Inserting key ${key} into internal node at position ${i}. Current keys: [${node.keys.join(', ')}].`,
+            t('insertingKeyIntoInternal', this.language, { key: key.toString(), position: i.toString() }) + '. ' + t('currentKeys', this.language) + ' [' + node.keys.join(', ') + '].',
             node,
             key,
             [node, rightChild],
@@ -363,6 +371,17 @@ export class BPlusTreeWithSteps extends BPlusTree {
             }
         }
 
+        // Make sure rightChild is not already in children before inserting
+        const existingRightChildIndex = node.children.indexOf(rightChild);
+        if (existingRightChildIndex !== -1) {
+            // Remove it first if it exists
+            node.children.splice(existingRightChildIndex, 1);
+            // Adjust i if necessary
+            if (existingRightChildIndex <= i) {
+                i--;
+            }
+        }
+
         node.keys.splice(i, 0, key);
         node.children.splice(i + 1, 0, rightChild);
         rightChild.parent = node;
@@ -370,7 +389,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         // After insertion
         const stateAfter = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
-            `Key ${key} inserted. New keys: [${node.keys.join(', ')}]. Checking if split is needed...`,
+            t('keyInserted', this.language, { key: key.toString() }) + '. ' + t('newKeys', this.language) + ' [' + node.keys.join(', ') + ']. ' + t('checkingIfSplitNeeded', this.language),
             node,
             key,
             [node],
@@ -383,7 +402,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Before split
             const stateBeforeSplit = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Internal node is full (${node.keys.length} keys, max ${this.order - 1}). Splitting internal node...`,
+                t('internalNodeFull', this.language, { count: node.keys.length.toString(), max: (this.order - 1).toString() }),
                 node,
                 key,
                 [node],
@@ -395,7 +414,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         } else {
             const stateFinal = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Internal node has ${node.keys.length} keys (within limit). Insertion complete!`,
+                t('internalNodeHasKeys', this.language, { count: node.keys.length.toString() }) + ' ' + t('withinLimit', this.language) + '. ' + t('insertionComplete', this.language),
                 node,
                 key,
                 [node],
@@ -420,33 +439,8 @@ export class BPlusTreeWithSteps extends BPlusTree {
             (child as BPlusTreeNode).parent = newInternal;
         }
 
-        // CRITICAL: Add newInternal to parent's children BEFORE serialization
-        // This ensures newInternal and ALL its children are included in the tree structure
-        if (node.parent !== null) {
-            // Find the position where node is in parent's children
-            const nodeIndex = node.parent.children.indexOf(node);
-            if (nodeIndex !== -1) {
-                // Insert newInternal right after node in parent's children
-                // This makes newInternal reachable from root during serialization
-                node.parent.children.splice(nodeIndex + 1, 0, newInternal);
-            } else {
-                // If node is not found in parent's children, add newInternal at the end
-                // This should not happen, but we handle it to be safe
-                node.parent.children.push(newInternal);
-            }
-            
-            // CRITICAL: Verify newInternal is now in parent's children
-            // This ensures it will be included when we serialize from root
-            if (!node.parent.children.includes(newInternal)) {
-                // Force add it if somehow it wasn't added
-                node.parent.children.push(newInternal);
-            }
-        } else {
-            // If node has no parent, it means we're splitting the root
-            // In this case, we'll create a new root in the next step
-            // But for now, we need to make sure newInternal is reachable
-            // Actually, if parent is null, we create a new root below, so this is handled
-        }
+        // Note: We'll add newInternal to parent's children in the else block below
+        // This ensures we don't add it twice
 
         // CRITICAL: Handle root split case differently
         // When splitting the root, we need to create the new root BEFORE serializing
@@ -463,7 +457,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Now serialize with the new root structure - both nodes are in the tree
             const stateAfterSplit = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Split internal node. Left: [${node.keys.join(', ')}], Right: [${newInternal.keys.join(', ')}]. Promoting key ${promoteKey}.`,
+                t('splittingInternalNode', this.language, { left: node.keys.join(', '), right: newInternal.keys.join(', ') }) + '. ' + t('promotingKey', this.language, { key: promoteKey.toString() }),
                 null,
                 promoteKey,
                 [node, newInternal],
@@ -475,7 +469,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Add step for root creation (already done above, but we document it)
             const stateAfterRoot = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `No parent exists. Creating new root with key ${promoteKey}. Tree height increased.`,
+                t('noParentExists', this.language) + '. ' + t('creatingNewRoot', this.language, { key: promoteKey.toString() }) + '. ' + t('treeHeightIncreased', this.language) + '.',
                 newRoot,
                 promoteKey,
                 [newRoot, node, newInternal],
@@ -485,16 +479,16 @@ export class BPlusTreeWithSteps extends BPlusTree {
             );
         } else {
             // Non-root split: Add newInternal to parent's children BEFORE serialization
-            const nodeIndex = node.parent.children.indexOf(node);
-            if (nodeIndex !== -1) {
-                node.parent.children.splice(nodeIndex + 1, 0, newInternal);
-            } else {
-                node.parent.children.push(newInternal);
-            }
+            // Check if it's already there to avoid duplicates
+            const alreadyInParent = node.parent.children.includes(newInternal);
             
-            // Verify newInternal is in parent's children
-            if (!node.parent.children.includes(newInternal)) {
-                node.parent.children.push(newInternal);
+            if (!alreadyInParent) {
+                const nodeIndex = node.parent.children.indexOf(node);
+                if (nodeIndex !== -1) {
+                    node.parent.children.splice(nodeIndex + 1, 0, newInternal);
+                } else {
+                    node.parent.children.push(newInternal);
+                }
             }
             
             // Verify newInternal has children and they have correct parent references
@@ -507,7 +501,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Serialize AFTER newInternal is added to parent's children
             const stateAfterSplit = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Split internal node. Left: [${node.keys.join(', ')}], Right: [${newInternal.keys.join(', ')}]. Promoting key ${promoteKey}.`,
+                t('splittingInternalNode', this.language, { left: node.keys.join(', '), right: newInternal.keys.join(', ') }) + '. ' + t('promotingKey', this.language, { key: promoteKey.toString() }),
                 null,
                 promoteKey,
                 [node, newInternal],
@@ -519,7 +513,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             // Capture state before promoting
             const stateBeforePromote = TreeStateManager.serializeTree(this);
             this.stepTracker.addStep(
-                `Inserting promoted key ${promoteKey} into parent node with keys [${node.parent.keys.join(', ')}].`,
+                t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: node.parent.keys.join(', ') }),
                 node.parent,
                 promoteKey,
                 [node.parent, node, newInternal],
@@ -529,9 +523,12 @@ export class BPlusTreeWithSteps extends BPlusTree {
             );
             
             // Remove newInternal from parent's children (insertIntoInternal will add it at the correct position)
-            const newInternalIndex = node.parent.children.indexOf(newInternal);
-            if (newInternalIndex !== -1) {
-                node.parent.children.splice(newInternalIndex, 1);
+            // Only remove if we added it above
+            if (!alreadyInParent) {
+                const newInternalIndex = node.parent.children.indexOf(newInternal);
+                if (newInternalIndex !== -1) {
+                    node.parent.children.splice(newInternalIndex, 1);
+                }
             }
             
             this.insertIntoInternalWithSteps(node.parent, promoteKey, newInternal);

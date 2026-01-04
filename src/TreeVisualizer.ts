@@ -1,4 +1,5 @@
 import { BPlusTreeNode, BPlusTree } from './BPlusTree.js';
+import { Language, t } from './translations.js';
 
 interface NodePosition {
     node: BPlusTreeNode;
@@ -12,6 +13,7 @@ export class TreeVisualizer {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private tree: BPlusTree;
+    private language: Language = 'en';
     private minNodeWidth = 80;
     private maxNodeWidth = 300;
     private baseNodeWidth = 100;
@@ -30,7 +32,7 @@ export class TreeVisualizer {
     private highlightedNodes: BPlusTreeNode[] = [];
     private highlightedKeys: number[] = [];
 
-    constructor(canvas: HTMLCanvasElement, tree: BPlusTree) {
+    constructor(canvas: HTMLCanvasElement, tree: BPlusTree, language: Language = 'en') {
         this.canvas = canvas;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -38,7 +40,12 @@ export class TreeVisualizer {
         }
         this.ctx = ctx;
         this.tree = tree;
+        this.language = language;
         this.resizeCanvas();
+    }
+
+    setLanguage(language: Language): void {
+        this.language = language;
     }
 
     setHighlightedKey(key: number | null): void {
@@ -62,6 +69,18 @@ export class TreeVisualizer {
         this.highlightedNode = null;
         this.highlightedNodes = [];
         this.highlightedKeys = [];
+    }
+
+    private getTheme(): 'light' | 'dark' {
+        return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    }
+
+    private getTextColor(): string {
+        return this.getTheme() === 'light' ? '#0f172a' : '#f1f5f9';
+    }
+
+    private getMutedTextColor(): string {
+        return this.getTheme() === 'light' ? '#64748b' : 'rgba(203, 213, 225, 0.7)';
     }
 
     private calculateRequiredWidth(): number {
@@ -133,9 +152,10 @@ export class TreeVisualizer {
     private drawEmptyTree(): void {
         this.ctx.save();
         this.ctx.font = '24px Inter, Arial, sans-serif';
-        this.ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+        this.ctx.fillStyle = this.getMutedTextColor();
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('Tree is empty', this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(t('treeIsEmpty', this.language), this.canvas.width / 2, this.canvas.height / 2);
         this.ctx.restore();
     }
 
@@ -200,7 +220,8 @@ export class TreeVisualizer {
     }
 
     private drawConnections(positions: Map<BPlusTreeNode, NodePosition>): void {
-        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+        const theme = this.getTheme();
+        this.ctx.strokeStyle = theme === 'light' ? 'rgba(100, 116, 139, 0.4)' : 'rgba(148, 163, 184, 0.4)';
         this.ctx.lineWidth = 2;
 
         for (const [node, pos] of positions) {
@@ -235,19 +256,20 @@ export class TreeVisualizer {
 
     private drawNode(node: BPlusTreeNode, pos: NodePosition): void {
         const isHighlighted = this.highlightedNode === node || this.highlightedNodes.includes(node);
+        const theme = this.getTheme();
         
-        // Draw node background with elegant colors
+        // Draw node background with elegant colors (theme-aware)
         if (isHighlighted) {
-            this.ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.2)';
             this.ctx.strokeStyle = '#f59e0b';
             this.ctx.lineWidth = 3;
         } else if (node.isLeaf) {
-            this.ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
-            this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)';
+            this.ctx.strokeStyle = theme === 'light' ? 'rgba(16, 185, 129, 0.7)' : 'rgba(16, 185, 129, 0.6)';
             this.ctx.lineWidth = 2;
         } else {
-            this.ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
-            this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.6)';
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)';
+            this.ctx.strokeStyle = theme === 'light' ? 'rgba(99, 102, 241, 0.7)' : 'rgba(99, 102, 241, 0.6)';
             this.ctx.lineWidth = 2;
         }
         
@@ -301,16 +323,21 @@ export class TreeVisualizer {
                 this.ctx.fill();
             }
 
-            this.ctx.fillStyle = isKeyHighlighted ? '#0f172a' : '#f1f5f9';
+            // Use theme-aware text color
+            if (isKeyHighlighted) {
+                this.ctx.fillStyle = '#0f172a'; // Dark text on highlighted (yellow) background
+            } else {
+                this.ctx.fillStyle = this.getTextColor();
+            }
             this.ctx.fillText(key.toString(), keyX, keyY);
         }
 
         // Draw node type label
         this.ctx.font = '10px Inter, Arial, sans-serif';
-        this.ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
+        this.ctx.fillStyle = this.getMutedTextColor();
         this.ctx.textAlign = 'left';
         this.ctx.fillText(
-            node.isLeaf ? 'Leaf' : 'Internal',
+            node.isLeaf ? t('leaf', this.language) : t('internal', this.language),
             pos.x - pos.width / 2 + 5,
             pos.y - pos.height / 2 + 12
         );

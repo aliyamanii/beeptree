@@ -3,6 +3,7 @@ import { BPlusTreeWithSteps } from './BPlusTreeWithSteps.js';
 import { TreeVisualizer } from './TreeVisualizer.js';
 import { StepTracker, OperationStep } from './StepTracker.js';
 import { TreeStateManager } from './TreeStateManager.js';
+import { Language, translations, t } from './translations.js';
 
 class BPlusTreeSimulator {
     private tree: BPlusTree;
@@ -29,7 +30,11 @@ class BPlusTreeSimulator {
     private closeStepsBtn: HTMLButtonElement;
     private explanationPanel: HTMLDivElement;
     private explanationText: HTMLParagraphElement;
+    private tipText: HTMLDivElement;
+    private themeToggle: HTMLButtonElement;
+    private languageToggle: HTMLButtonElement;
     
+    private currentLanguage: Language = 'en';
     private currentStepTracker: StepTracker | null = null;
     private isPlaying: boolean = false;
     private playInterval: number | null = null;
@@ -58,6 +63,9 @@ class BPlusTreeSimulator {
         this.closeStepsBtn = document.getElementById('close-steps-btn') as HTMLButtonElement;
         this.explanationPanel = document.getElementById('explanation-panel') as HTMLDivElement;
         this.explanationText = document.getElementById('explanation-text') as HTMLParagraphElement;
+        this.tipText = document.querySelector('.tip-text') as HTMLDivElement;
+        this.themeToggle = document.getElementById('theme-toggle') as HTMLButtonElement;
+        this.languageToggle = document.getElementById('language-toggle') as HTMLButtonElement;
 
         // Verify critical elements exist
         if (!this.canvas || !this.insertBtn || !this.valueInput) {
@@ -70,11 +78,25 @@ class BPlusTreeSimulator {
 
         const initialOrder = parseInt(this.orderInput?.value || '4') || 4;
         this.tree = new BPlusTree(initialOrder);
-        this.treeWithSteps = new BPlusTreeWithSteps(initialOrder);
-        this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+        this.treeWithSteps = new BPlusTreeWithSteps(initialOrder, undefined, this.currentLanguage);
+        this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
+
+        // Load language preference
+        const savedLanguage = localStorage.getItem('language') as Language || 'en';
+        this.currentLanguage = savedLanguage;
+        document.documentElement.setAttribute('lang', savedLanguage);
+        if (savedLanguage === 'fa') {
+            document.documentElement.setAttribute('dir', 'rtl');
+        } else {
+            document.documentElement.setAttribute('dir', 'ltr');
+        }
 
         this.setupEventListeners();
-        this.updateStatus('Ready. Enter a value and click Insert, Delete, or Search. Hold Shift for step-by-step mode.', 'info');
+        this.setupThemeToggle();
+        this.setupLanguageToggle();
+        this.updateUIText();
+
+        this.updateStatus(t('ready', this.currentLanguage), 'info');
         this.visualizer.draw();
     }
 
@@ -94,12 +116,13 @@ class BPlusTreeSimulator {
                     this.tree.insert(key);
                 }
                 
-                this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+                this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
                 this.closeStepMode();
-                this.updateStatus(`Tree order changed to ${newOrder}. Tree reorganized with ${allKeys.length} key${allKeys.length !== 1 ? 's' : ''}.`, 'info');
+                const plural = allKeys.length !== 1 ? (this.currentLanguage === 'fa' ? 'ها' : 's') : '';
+                this.updateStatus(t('orderReorganized', this.currentLanguage, { count: allKeys.length.toString(), plural }), 'info');
                 this.visualizer.draw();
             } else {
-                this.updateStatus('Order must be at least 3.', 'error');
+                this.updateStatus(t('orderMustBeAtLeast', this.currentLanguage), 'error');
                 this.orderInput.value = '4';
             }
         });
@@ -157,7 +180,7 @@ class BPlusTreeSimulator {
     private getValue(): number | null {
         const value = parseInt(this.valueInput.value);
         if (isNaN(value)) {
-            this.updateStatus('Please enter a valid number.', 'error');
+            this.updateStatus(t('pleaseEnterValidNumber', this.currentLanguage), 'error');
             return null;
         }
         return value;
@@ -166,16 +189,16 @@ class BPlusTreeSimulator {
     private insertValue(value: number): void {
         if (this.useStepMode) {
             // Use step-by-step mode
-            this.treeWithSteps = new BPlusTreeWithSteps(parseInt(this.orderInput.value) || 4, this.tree);
+            this.treeWithSteps = new BPlusTreeWithSteps(parseInt(this.orderInput.value) || 4, this.tree, this.currentLanguage);
             this.currentStepTracker = this.treeWithSteps.insertWithSteps(value);
             this.tree = this.treeWithSteps; // Use the tree with steps
-            this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+            this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
             this.startStepMode();
         } else {
             // Normal mode
             try {
                 this.tree.insert(value);
-                this.updateStatus(`Value ${value} inserted successfully.`, 'success');
+                this.updateStatus(t('valueInserted', this.currentLanguage, { value: value.toString() }), 'success');
                 this.visualizer.setHighlightedKey(value);
                 this.visualizer.draw();
                 setTimeout(() => {
@@ -193,16 +216,16 @@ class BPlusTreeSimulator {
     private searchValue(value: number): void {
         if (this.useStepMode) {
             // Use step-by-step mode
-            this.treeWithSteps = new BPlusTreeWithSteps(parseInt(this.orderInput.value) || 4, this.tree);
+            this.treeWithSteps = new BPlusTreeWithSteps(parseInt(this.orderInput.value) || 4, this.tree, this.currentLanguage);
             this.currentStepTracker = this.treeWithSteps.searchWithSteps(value);
             this.tree = this.treeWithSteps; // Use the tree with steps
-            this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+            this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
             this.startStepMode();
         } else {
             // Normal mode
             const node = this.tree.search(value);
             if (node) {
-                this.updateStatus(`Value ${value} found in the tree.`, 'success');
+                this.updateStatus(t('valueFound', this.currentLanguage, { value: value.toString() }), 'success');
                 this.visualizer.setHighlightedKey(value);
                 this.visualizer.setHighlightedNode(node);
                 this.visualizer.draw();
@@ -212,7 +235,7 @@ class BPlusTreeSimulator {
                     this.visualizer.draw();
                 }, 3000);
             } else {
-                this.updateStatus(`Value ${value} not found in the tree.`, 'error');
+                this.updateStatus(t('valueNotFound', this.currentLanguage, { value: value.toString() }), 'error');
             }
             this.valueInput.value = '';
             this.valueInput.focus();
@@ -222,7 +245,7 @@ class BPlusTreeSimulator {
     private deleteValue(value: number): void {
         const success = this.tree.delete(value);
         if (success) {
-            this.updateStatus(`Value ${value} deleted successfully.`, 'success');
+            this.updateStatus(t('valueDeleted', this.currentLanguage, { value: value.toString() }), 'success');
             this.visualizer.setHighlightedKey(value);
             this.visualizer.draw();
             setTimeout(() => {
@@ -239,10 +262,10 @@ class BPlusTreeSimulator {
     private clearTree(): void {
         const order = parseInt(this.orderInput.value) || 4;
         this.tree = new BPlusTree(order);
-        this.treeWithSteps = new BPlusTreeWithSteps(order);
-        this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+        this.treeWithSteps = new BPlusTreeWithSteps(order, undefined, this.currentLanguage);
+        this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
         this.closeStepMode();
-        this.updateStatus('Tree cleared.', 'info');
+        this.updateStatus(t('treeCleared', this.currentLanguage), 'info');
         this.visualizer.draw();
     }
 
@@ -268,7 +291,7 @@ class BPlusTreeSimulator {
             }, index * 300);
         });
 
-        this.updateStatus(`Inserting 10 random values: ${values.join(', ')}`, 'info');
+        this.updateStatus(t('insertingRandomValues', this.currentLanguage, { values: values.join(', ') }), 'info');
     }
 
 
@@ -276,7 +299,7 @@ class BPlusTreeSimulator {
         if (!this.currentStepTracker) return;
         
         this.stepControls.style.display = 'block';
-        this.explanationPanel.style.display = 'block';
+        this.explanationPanel.style.display = 'none'; // Hide explanation panel, use tip area instead
         this.currentStepTracker.goToFirst();
         this.updateStepDisplay();
         this.valueInput.value = '';
@@ -287,6 +310,7 @@ class BPlusTreeSimulator {
         this.explanationPanel.style.display = 'none';
         this.stopPlaying();
         this.currentStepTracker = null;
+        this.updateTipText(); // Restore tip text to original
         this.visualizer.clearHighlights();
     }
 
@@ -297,17 +321,21 @@ class BPlusTreeSimulator {
         const totalSteps = this.currentStepTracker.getTotalSteps();
         const currentIndex = this.currentStepTracker.getCurrentStepIndex();
         
-        this.stepCounter.textContent = `Step ${currentIndex + 1} of ${totalSteps}`;
+        this.stepCounter.innerHTML = `<span data-i18n="step">${t('step', this.currentLanguage)}</span> ${currentIndex + 1} <span data-i18n="of">${t('of', this.currentLanguage)}</span> ${totalSteps}`;
         
         if (currentStep) {
             this.explanationText.textContent = currentStep.description;
+            // Update tip text with explanation
+            if (this.tipText) {
+                this.tipText.textContent = currentStep.description;
+            }
             
             // Restore tree state for this step
             if (currentStep.treeState && currentStep.treeState.length > 0) {
                 try {
                     const restoredTree = TreeStateManager.deserializeTree(currentStep.treeState, currentStep.treeOrder);
                     this.tree = restoredTree;
-                    this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+                    this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
                     
                     // Find corresponding nodes in the restored tree
                     let restoredCurrentNode: BPlusTreeNode | null = null;
@@ -431,7 +459,7 @@ class BPlusTreeSimulator {
         if (!this.currentStepTracker) return;
         
         this.isPlaying = true;
-        this.playPauseBtn.textContent = '⏸ Pause';
+        this.playPauseBtn.innerHTML = `⏸ <span data-i18n="pause">${t('pause', this.currentLanguage)}</span>`;
         
         this.playInterval = window.setInterval(() => {
             if (this.currentStepTracker && this.currentStepTracker.hasNext()) {
@@ -445,7 +473,7 @@ class BPlusTreeSimulator {
 
     private stopPlaying(): void {
         this.isPlaying = false;
-        this.playPauseBtn.textContent = '▶ Play';
+        this.playPauseBtn.innerHTML = `▶ <span data-i18n="play">${t('play', this.currentLanguage)}</span>`;
         if (this.playInterval !== null) {
             clearInterval(this.playInterval);
             this.playInterval = null;
@@ -467,6 +495,110 @@ class BPlusTreeSimulator {
                 toast.parentNode.removeChild(toast);
             }
         }, 3000);
+    }
+
+    private setupThemeToggle(): void {
+        // Load saved theme preference
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        this.updateThemeIcon(savedTheme);
+
+        // Toggle theme on button click
+        this.themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            this.updateThemeIcon(newTheme);
+            
+            // Redraw the canvas with new theme colors
+            this.visualizer.draw();
+        });
+    }
+
+    private setupLanguageToggle(): void {
+        this.updateLanguageIcon(this.currentLanguage);
+
+        this.languageToggle.addEventListener('click', () => {
+            this.currentLanguage = this.currentLanguage === 'en' ? 'fa' : 'en';
+            localStorage.setItem('language', this.currentLanguage);
+            document.documentElement.setAttribute('lang', this.currentLanguage);
+            if (this.currentLanguage === 'fa') {
+                document.documentElement.setAttribute('dir', 'rtl');
+            } else {
+                document.documentElement.setAttribute('dir', 'ltr');
+            }
+            this.updateLanguageIcon(this.currentLanguage);
+            this.updateUIText();
+            this.visualizer.setLanguage(this.currentLanguage);
+            this.visualizer.draw();
+        });
+    }
+
+    private updateLanguageIcon(lang: Language): void {
+        if (this.languageToggle) {
+            const icon = this.languageToggle.querySelector('.language-icon');
+            if (icon) {
+                icon.textContent = lang === 'en' ? 'EN' : 'FA';
+            }
+        }
+    }
+
+    private updateUIText(): void {
+        // Update all elements with data-i18n attribute
+        document.querySelectorAll('[data-i18n]').forEach(element => {
+            const key = element.getAttribute('data-i18n') as keyof typeof translations.en;
+            if (key && translations[this.currentLanguage][key]) {
+                if (element instanceof HTMLInputElement && element.hasAttribute('data-i18n-placeholder')) {
+                    const placeholderKey = element.getAttribute('data-i18n-placeholder') as keyof typeof translations.en;
+                    if (placeholderKey && translations[this.currentLanguage][placeholderKey]) {
+                        element.placeholder = translations[this.currentLanguage][placeholderKey];
+                    }
+                } else {
+                    element.textContent = translations[this.currentLanguage][key];
+                }
+            }
+        });
+
+        // Update title and subtitle
+        const title = document.querySelector('h1');
+        if (title) {
+            title.textContent = translations[this.currentLanguage].title;
+        }
+        const subtitle = document.querySelector('.subtitle');
+        if (subtitle) {
+            subtitle.textContent = translations[this.currentLanguage].subtitle;
+        }
+
+        // Update play/pause button if needed
+        if (this.isPlaying) {
+            this.playPauseBtn.innerHTML = `⏸ <span data-i18n="pause">${t('pause', this.currentLanguage)}</span>`;
+        } else {
+            this.playPauseBtn.innerHTML = `▶ <span data-i18n="play">${t('play', this.currentLanguage)}</span>`;
+        }
+
+        // Update step counter if in step mode
+        if (this.currentStepTracker) {
+            this.updateStepDisplay();
+        }
+
+        // Update tip text if not in step mode
+        this.updateTipText();
+    }
+
+    private updateTipText(): void {
+        if (this.tipText && !this.currentStepTracker) {
+            // Restore original tip text when not in step mode
+            this.tipText.innerHTML = translations[this.currentLanguage].tipText;
+        }
+    }
+
+    private updateThemeIcon(theme: string): void {
+        const icon = this.themeToggle.querySelector('.theme-icon');
+        if (icon) {
+            icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+        }
     }
 }
 
