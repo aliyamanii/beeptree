@@ -1,7 +1,8 @@
-import { BPlusTree } from './BPlusTree.js';
+import { BPlusTree, BPlusTreeNode } from './BPlusTree.js';
 import { BPlusTreeWithSteps } from './BPlusTreeWithSteps.js';
 import { TreeVisualizer } from './TreeVisualizer.js';
 import { StepTracker, OperationStep } from './StepTracker.js';
+import { TreeStateManager } from './TreeStateManager.js';
 
 class BPlusTreeSimulator {
     private tree: BPlusTree;
@@ -291,13 +292,90 @@ class BPlusTreeSimulator {
         if (currentStep) {
             this.explanationText.textContent = currentStep.description;
             
-            // Update visualization
-            this.visualizer.clearHighlights();
-            this.visualizer.setHighlightedNode(currentStep.currentNode);
-            this.visualizer.setHighlightedKey(currentStep.currentKey);
-            this.visualizer.setHighlightedNodes(currentStep.highlightedNodes);
-            this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
-            this.visualizer.draw();
+            // Restore tree state for this step
+            if (currentStep.treeState && currentStep.treeState.length > 0) {
+                try {
+                    const restoredTree = TreeStateManager.deserializeTree(currentStep.treeState, currentStep.treeOrder);
+                    this.tree = restoredTree;
+                    this.visualizer = new TreeVisualizer(this.canvas, this.tree);
+                    
+                    // Find corresponding nodes in the restored tree
+                    let restoredCurrentNode: BPlusTreeNode | null = null;
+                    const restoredHighlightedNodes: BPlusTreeNode[] = [];
+                    
+                    // Find current node in restored tree
+                    if (currentStep.currentNode) {
+                        // Check if it's the root (root has no parent or is the tree root)
+                        const wasRoot = !currentStep.currentNode.parent || 
+                                       currentStep.currentNode === restoredTree.root ||
+                                       (currentStep.currentNode.keys.length === restoredTree.root.keys.length &&
+                                        currentStep.currentNode.keys.every((k, i) => k === restoredTree.root.keys[i]));
+                        
+                        if (wasRoot) {
+                            restoredCurrentNode = TreeStateManager.findRoot(restoredTree);
+                        } else {
+                            restoredCurrentNode = TreeStateManager.findNodeByKeys(restoredTree, currentStep.currentNode.keys);
+                        }
+                    }
+                    
+                    // Find highlighted nodes in restored tree
+                    for (const node of currentStep.highlightedNodes) {
+                        if (node && node.keys.length > 0) {
+                            // Check if it's the root
+                            const wasRoot = !node.parent || 
+                                           (node.keys.length === restoredTree.root.keys.length &&
+                                            node.keys.every((k, i) => k === restoredTree.root.keys[i]));
+                            
+                            let found: BPlusTreeNode | null = null;
+                            if (wasRoot) {
+                                found = TreeStateManager.findRoot(restoredTree);
+                            } else {
+                                found = TreeStateManager.findNodeByKeys(restoredTree, node.keys);
+                            }
+                            
+                            if (found && !restoredHighlightedNodes.includes(found)) {
+                                restoredHighlightedNodes.push(found);
+                            }
+                        }
+                    }
+                    
+                    // CRITICAL: Always ensure current node is in highlighted nodes
+                    // This ensures nodes mentioned in step descriptions are highlighted
+                    if (restoredCurrentNode) {
+                        if (!restoredHighlightedNodes.includes(restoredCurrentNode)) {
+                            restoredHighlightedNodes.push(restoredCurrentNode);
+                        }
+                    } else if (currentStep.currentNode && currentStep.currentNode.keys.length > 0) {
+                        // If we couldn't find the current node, try to find it again
+                        // This is important for steps like "Reached leaf node with keys [...]"
+                        const found = TreeStateManager.findNodeByKeys(restoredTree, currentStep.currentNode.keys);
+                        if (found) {
+                            restoredCurrentNode = found;
+                            if (!restoredHighlightedNodes.includes(found)) {
+                                restoredHighlightedNodes.push(found);
+                            }
+                        }
+                    }
+                    
+                    // Update visualization with restored nodes
+                    this.visualizer.clearHighlights();
+                    this.visualizer.setHighlightedNode(restoredCurrentNode);
+                    this.visualizer.setHighlightedKey(currentStep.currentKey);
+                    this.visualizer.setHighlightedNodes(restoredHighlightedNodes);
+                    this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
+                    this.visualizer.draw();
+                } catch (error) {
+                    console.error('Error restoring tree state:', error);
+                }
+            } else {
+                // No tree state, use original node references
+                this.visualizer.clearHighlights();
+                this.visualizer.setHighlightedNode(currentStep.currentNode);
+                this.visualizer.setHighlightedKey(currentStep.currentKey);
+                this.visualizer.setHighlightedNodes(currentStep.highlightedNodes);
+                this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
+                this.visualizer.draw();
+            }
             
             // Update button states
             this.prevStepBtn.disabled = !this.currentStepTracker.hasPrevious();

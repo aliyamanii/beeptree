@@ -7,7 +7,8 @@ export interface OperationStep {
     currentKey: number | null;
     highlightedNodes: BPlusTreeNode[];
     highlightedKeys: number[];
-    treeState: string; // JSON representation of tree state
+    treeState: string; // JSON representation of tree state at this step
+    treeOrder: number; // Tree order needed for deserialization
 }
 
 export class StepTracker {
@@ -19,7 +20,9 @@ export class StepTracker {
         currentNode: BPlusTreeNode | null = null,
         currentKey: number | null = null,
         highlightedNodes: BPlusTreeNode[] = [],
-        highlightedKeys: number[] = []
+        highlightedKeys: number[] = [],
+        treeState: string = '',
+        treeOrder: number = 4
     ): void {
         const step: OperationStep = {
             stepNumber: this.steps.length + 1,
@@ -28,7 +31,8 @@ export class StepTracker {
             currentKey,
             highlightedNodes: [...highlightedNodes],
             highlightedKeys: [...highlightedKeys],
-            treeState: '' // Will be set externally
+            treeState,
+            treeOrder
         };
         this.steps.push(step);
     }
