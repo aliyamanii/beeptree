@@ -12,10 +12,19 @@ export class TreeVisualizer {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private tree: BPlusTree;
-    private nodeWidth = 120;
+    private minNodeWidth = 80;
+    private maxNodeWidth = 300;
+    private baseNodeWidth = 100;
+    private keyWidth = 25; // Width per key
     private nodeHeight = 60;
     private horizontalSpacing = 50;
     private verticalSpacing = 100;
+    
+    // Calculate node width based on number of keys
+    private getNodeWidth(node: BPlusTreeNode): number {
+        const width = this.baseNodeWidth + (node.keys.length * this.keyWidth);
+        return Math.max(this.minNodeWidth, Math.min(this.maxNodeWidth, width));
+    }
     private highlightedKey: number | null = null;
     private highlightedNode: BPlusTreeNode | null = null;
     private highlightedNodes: BPlusTreeNode[] = [];
@@ -78,10 +87,16 @@ export class TreeVisualizer {
             }
         }
 
-        // Find the widest level
+        // Find the widest level using actual node widths
         let maxWidth = 0;
         for (const nodes of levels) {
-            const totalWidth = nodes.length * this.nodeWidth + (nodes.length - 1) * this.horizontalSpacing;
+            let totalWidth = 0;
+            for (let i = 0; i < nodes.length; i++) {
+                totalWidth += this.getNodeWidth(nodes[i]);
+                if (i < nodes.length - 1) {
+                    totalWidth += this.horizontalSpacing;
+                }
+            }
             maxWidth = Math.max(maxWidth, totalWidth);
         }
 
@@ -148,21 +163,36 @@ export class TreeVisualizer {
         const startY = 50;
         for (let level = 0; level < levels.length; level++) {
             const nodes = levels[level];
-            const totalWidth = nodes.length * this.nodeWidth + (nodes.length - 1) * this.horizontalSpacing;
-            const startX = (this.canvas.width - totalWidth) / 2 + this.nodeWidth / 2;
+            
+            // Calculate total width for this level using actual node widths
+            let totalWidth = 0;
+            const nodeWidths: number[] = [];
+            for (const node of nodes) {
+                const width = this.getNodeWidth(node);
+                nodeWidths.push(width);
+                totalWidth += width;
+            }
+            totalWidth += (nodes.length - 1) * this.horizontalSpacing;
+            
+            // Calculate starting X position (centered)
+            let currentX = (this.canvas.width - totalWidth) / 2;
             
             for (let i = 0; i < nodes.length; i++) {
                 const node = nodes[i];
-                const x = startX + i * (this.nodeWidth + this.horizontalSpacing);
+                const nodeWidth = nodeWidths[i];
+                const x = currentX + nodeWidth / 2;
                 const y = startY + level * (this.nodeHeight + this.verticalSpacing);
                 
                 positions.set(node, {
                     node,
                     x,
                     y,
-                    width: this.nodeWidth,
+                    width: nodeWidth,
                     height: this.nodeHeight
                 });
+                
+                // Move to next node position
+                currentX += nodeWidth + this.horizontalSpacing;
             }
         }
 

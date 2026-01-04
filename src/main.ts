@@ -16,7 +16,7 @@ class BPlusTreeSimulator {
     private searchBtn: HTMLButtonElement;
     private clearBtn: HTMLButtonElement;
     private randomBtn: HTMLButtonElement;
-    private statusDiv: HTMLDivElement;
+    private toastContainer: HTMLDivElement;
     
     // Step-by-step controls
     private stepControls: HTMLDivElement;
@@ -45,7 +45,7 @@ class BPlusTreeSimulator {
         this.searchBtn = document.getElementById('search-btn') as HTMLButtonElement;
         this.clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
         this.randomBtn = document.getElementById('random-btn') as HTMLButtonElement;
-        this.statusDiv = document.getElementById('status') as HTMLDivElement;
+        this.toastContainer = document.getElementById('toast-container') as HTMLDivElement;
         
         // Step-by-step elements
         this.stepControls = document.getElementById('step-controls') as HTMLDivElement;
@@ -82,11 +82,21 @@ class BPlusTreeSimulator {
         this.orderInput.addEventListener('change', () => {
             const newOrder = parseInt(this.orderInput.value);
             if (newOrder >= 3) {
+                // Extract all keys from the current tree
+                const allKeys = this.tree.getAllKeys();
+                
+                // Create new tree with the new order
                 this.tree = new BPlusTree(newOrder);
                 this.treeWithSteps = new BPlusTreeWithSteps(newOrder);
+                
+                // Re-insert all keys into the new tree
+                for (const key of allKeys) {
+                    this.tree.insert(key);
+                }
+                
                 this.visualizer = new TreeVisualizer(this.canvas, this.tree);
                 this.closeStepMode();
-                this.updateStatus(`Tree order changed to ${newOrder}. Tree cleared.`, 'info');
+                this.updateStatus(`Tree order changed to ${newOrder}. Tree reorganized with ${allKeys.length} key${allKeys.length !== 1 ? 's' : ''}.`, 'info');
                 this.visualizer.draw();
             } else {
                 this.updateStatus('Order must be at least 3.', 'error');
@@ -443,8 +453,20 @@ class BPlusTreeSimulator {
     }
 
     private updateStatus(message: string, type: 'info' | 'success' | 'error'): void {
-        this.statusDiv.textContent = message;
-        this.statusDiv.className = `status ${type}`;
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        
+        // Add to container
+        this.toastContainer.appendChild(toast);
+        
+        // Remove after animation completes (3 seconds total)
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
     }
 }
 

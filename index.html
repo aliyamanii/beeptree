@@ -14,28 +14,20 @@
         </header>
 
         <div class="controls">
-            <div class="control-group">
-                <label for="order-input">Tree Order</label>
-                <input type="number" id="order-input" min="3" value="4" placeholder="Minimum 3" />
-            </div>
-            <div class="control-group horizontal">
+            <div class="control-row">
+                <label for="order-input">Order:</label>
+                <input type="number" id="order-input" min="3" value="4" placeholder="Min 3" />
                 <input type="number" id="value-input" placeholder="Enter value" />
                 <button id="insert-btn">Insert</button>
                 <button id="delete-btn">Delete</button>
                 <button id="search-btn">Search</button>
                 <button id="clear-btn">Clear</button>
+                <button id="random-btn">Random (10)</button>
             </div>
-            <div class="control-group">
-                <button id="random-btn">Insert Random (10)</button>
-            </div>
-            <div class="control-group full-width">
-                <div class="tip-text">
-                    💡 <strong>Tip:</strong> Hold <strong>Shift</strong> while clicking Insert or Search for step-by-step mode
-                </div>
+            <div class="tip-text">
+                💡 Hold <strong>Shift</strong> while clicking Insert or Search for step-by-step mode
             </div>
         </div>
-
-        <div class="status" id="status"></div>
 
         <div class="step-controls" id="step-controls" style="display: none;">
             <div class="step-info">
@@ -60,6 +52,8 @@
             <canvas id="tree-canvas"></canvas>
         </div>
     </div>
+
+    <div id="toast-container"></div>
 
     <script type="module">
         // Fix paths for GitHub Pages subdirectory and local development

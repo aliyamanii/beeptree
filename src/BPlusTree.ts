@@ -317,5 +317,24 @@ export class BPlusTree {
         
         return nodes;
     }
+
+    // Get all keys from the tree by traversing leaf nodes
+    getAllKeys(): number[] {
+        const keys: number[] = [];
+        let node: BPlusTreeNode | null = this.root;
+        
+        // Find the leftmost leaf
+        while (!node.isLeaf) {
+            node = node.children[0] as BPlusTreeNode;
+        }
+        
+        // Traverse all leaf nodes using the 'next' pointer
+        while (node !== null) {
+            keys.push(...node.keys);
+            node = node.next;
+        }
+        
+        return keys;
+    }
 }
 
