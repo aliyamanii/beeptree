@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B+ Tree Visual Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>B+ Tree Visual Simulator</h1>
+            <p class="subtitle">Interactive visualization of B+ tree operations</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="order-input">Tree Order</label>
+                <input type="number" id="order-input" min="3" value="4" placeholder="Minimum 3" />
+            </div>
+            <div class="control-group horizontal">
+                <input type="number" id="value-input" placeholder="Enter value" />
+                <button id="insert-btn">Insert</button>
+                <button id="delete-btn">Delete</button>
+                <button id="search-btn">Search</button>
+                <button id="clear-btn">Clear</button>
+            </div>
+            <div class="control-group">
+                <button id="random-btn">Insert Random (10)</button>
+            </div>
+            <div class="control-group full-width">
+                <div class="tip-text">
+                    💡 <strong>Tip:</strong> Hold <strong>Shift</strong> while clicking Insert or Search for step-by-step mode
+                </div>
+            </div>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="step-controls" id="step-controls" style="display: none;">
+            <div class="step-info">
+                <span id="step-counter">Step 0 of 0</span>
+            </div>
+            <div class="step-buttons">
+                <button id="first-step-btn">⏮ First</button>
+                <button id="prev-step-btn">⏪ Previous</button>
+                <button id="play-pause-btn">▶ Play</button>
+                <button id="next-step-btn">Next ⏩</button>
+                <button id="last-step-btn">Last ⏭</button>
+                <button id="close-steps-btn">Close</button>
+            </div>
+        </div>
+
+        <div class="explanation-panel" id="explanation-panel" style="display: none;">
+            <h3>Step Explanation</h3>
+            <p id="explanation-text">No explanation available.</p>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="tree-canvas"></canvas>
+        </div>
+    </div>
+
+    <script type="module" src="dist/main.js"></script>
+</body>
+</html>
+
