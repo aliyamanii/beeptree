@@ -35,6 +35,7 @@ class BPlusTreeSimulator {
     private useStepMode: boolean = false;
 
     constructor() {
+        // Get DOM elements with error checking
         this.canvas = document.getElementById('tree-canvas') as HTMLCanvasElement;
         this.orderInput = document.getElementById('order-input') as HTMLInputElement;
         this.valueInput = document.getElementById('value-input') as HTMLInputElement;
@@ -57,7 +58,16 @@ class BPlusTreeSimulator {
         this.explanationPanel = document.getElementById('explanation-panel') as HTMLDivElement;
         this.explanationText = document.getElementById('explanation-text') as HTMLParagraphElement;
 
-        const initialOrder = parseInt(this.orderInput.value) || 4;
+        // Verify critical elements exist
+        if (!this.canvas || !this.insertBtn || !this.valueInput) {
+            const missing = [];
+            if (!this.canvas) missing.push('tree-canvas');
+            if (!this.insertBtn) missing.push('insert-btn');
+            if (!this.valueInput) missing.push('value-input');
+            throw new Error(`Missing required DOM elements: ${missing.join(', ')}`);
+        }
+
+        const initialOrder = parseInt(this.orderInput?.value || '4') || 4;
         this.tree = new BPlusTree(initialOrder);
         this.treeWithSteps = new BPlusTreeWithSteps(initialOrder);
         this.visualizer = new TreeVisualizer(this.canvas, this.tree);
@@ -361,6 +371,30 @@ class BPlusTreeSimulator {
 }
 
 // Initialize the simulator when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new BPlusTreeSimulator();
-});
+// Check if DOM is already loaded (for dynamic imports) or wait for it
+function initializeApp() {
+    try {
+        console.log('Initializing B+ Tree Simulator...');
+        new BPlusTreeSimulator();
+        console.log('B+ Tree Simulator initialized successfully');
+    } catch (error) {
+        console.error('Error initializing B+ Tree Simulator:', error);
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'padding: 40px; text-align: center; color: #ef4444; font-family: Arial;';
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errorDiv.innerHTML = `
+            <h2>Error Initializing Application</h2>
+            <p>An error occurred while initializing the application.</p>
+            <p>Check the browser console (F12) for details.</p>
+            <p style="font-size: 12px; color: #666;">Error: ${errorMessage}</p>
+        `;
+        document.body.appendChild(errorDiv);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM is already loaded, initialize immediately
+    initializeApp();
+}
