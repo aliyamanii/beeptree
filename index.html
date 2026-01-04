@@ -66,22 +66,33 @@
     <script type="module">
         // Fix paths for GitHub Pages subdirectory and local development
         (function() {
-            // Get the directory path (remove filename if present)
-            let pathname = window.location.pathname;
+            // Get the original pathname
+            const originalPathname = window.location.pathname;
             
-            // Remove filename (like index.html) from path
-            if (pathname.endsWith('.html') || pathname.endsWith('/')) {
-                pathname = pathname.replace(/\/[^/]*\.html$/, '').replace(/\/$/, '');
+            // Remove filename (like index.html) from path to get directory
+            let dirPath = originalPathname.replace(/\/[^/]*\.html$/, '');
+            // Ensure it ends with / for directory paths
+            if (dirPath && !dirPath.endsWith('/')) {
+                dirPath += '/';
+            }
+            // If we're at root, dirPath will be empty or just '/'
+            if (dirPath === '/') {
+                dirPath = '/';
             }
             
             // Get path parts (excluding empty strings)
-            const pathParts = pathname.split('/').filter(p => p);
+            const pathParts = dirPath.split('/').filter(p => p);
             
-            // If first part looks like a repo name (not a file), use it as base
-            // Otherwise, we're at root or in a file, so use root
-            const firstPart = pathParts[0] || '';
-            const isRepoName = firstPart && !firstPart.includes('.') && pathname.startsWith('/' + firstPart + '/');
-            const basePath = isRepoName ? '/' + firstPart + '/' : '/';
+            // If we have path parts and the first part looks like a repo name (no file extension)
+            // use it as base path
+            let basePath = '/';
+            if (pathParts.length > 0) {
+                const firstPart = pathParts[0];
+                // Check if it's a repo name (not a file - no extension)
+                if (firstPart && !firstPart.includes('.')) {
+                    basePath = '/' + firstPart + '/';
+                }
+            }
             
             // Fix CSS path
             const stylesheet = document.getElementById('main-stylesheet');
