@@ -35,17 +35,32 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "Checking dist folder contents:"
+          ls -la dist/
+          echo "Checking if main.js exists:"
+          test -f dist/main.js && echo "✓ main.js exists" || echo "✗ main.js missing"
+          test -f dist/BPlusTree.js && echo "✓ BPlusTree.js exists" || echo "✗ BPlusTree.js missing"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
+
+      - name: Prepare deployment
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp styles.css _site/
+          cp .nojekyll _site/ 2>/dev/null || echo ".nojekyll not found, continuing..."
+          cp -r dist _site/
+          echo "Deployment files prepared:"
+          ls -la _site/
+          ls -la _site/dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: |
-            index.html
-            styles.css
-            .nojekyll
-            dist/
+          path: _site
           retention-days: 30
 
   deploy:
