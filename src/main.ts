@@ -336,7 +336,13 @@ class BPlusTreeSimulator {
                 try {
                     const restoredTree = TreeStateManager.deserializeTree(currentStep.treeState, currentStep.treeOrder);
                     this.tree = restoredTree;
-                    this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
+                    // Update tree while preserving previous positions for smooth animation
+                    if (this.visualizer) {
+                        this.visualizer.updateTree(restoredTree, true);
+                        this.visualizer.setLanguage(this.currentLanguage);
+                    } else {
+                        this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
+                    }
                     
                     // Find corresponding nodes in the restored tree using IDs
                     let restoredCurrentNode: BPlusTreeNode | null = null;
@@ -393,7 +399,7 @@ class BPlusTreeSimulator {
                     this.visualizer.setHighlightedKey(currentStep.currentKey);
                     this.visualizer.setHighlightedNodes(finalHighlightedNodes);
                     this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
-                    this.visualizer.draw();
+                    this.visualizer.draw(true); // Enable animations in step mode
                 } catch (error) {
                     console.error('Error restoring tree state:', error);
                 }

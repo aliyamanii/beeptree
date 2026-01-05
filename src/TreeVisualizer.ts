@@ -9,6 +9,24 @@ interface NodePosition {
     height: number;
 }
 
+interface KeyAnimation {
+    key: number;
+    fromNode: BPlusTreeNode;
+    toNode: BPlusTreeNode;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    progress: number;
+}
+
+interface NodeSplitAnimation {
+    originalNode: BPlusTreeNode;
+    leftNode: BPlusTreeNode;
+    rightNode: BPlusTreeNode;
+    progress: number;
+}
+
 export class TreeVisualizer {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
@@ -21,6 +39,21 @@ export class TreeVisualizer {
     private nodeHeight = 60;
     private horizontalSpacing = 50;
     private verticalSpacing = 100;
+    
+    // Animation state
+    private previousPositions: Map<BPlusTreeNode, NodePosition> = new Map();
+    private activeAnimations: {
+        keyPromotions: KeyAnimation[];
+        nodeSplits: NodeSplitAnimation[];
+        positionTransitions: boolean;
+    } = {
+        keyPromotions: [],
+        nodeSplits: [],
+        positionTransitions: false
+    };
+    private animationStartTime: number = 0;
+    private animationDuration: number = 600; // milliseconds
+    private animationFrameId: number | null = null;
     
     // Calculate node width based on number of keys
     private getNodeWidth(node: BPlusTreeNode): number {
@@ -41,6 +74,42 @@ export class TreeVisualizer {
         this.ctx = ctx;
         this.tree = tree;
         this.language = language;
+        this.resizeCanvas();
+    }
+
+    // Update tree while preserving previous positions for animation
+    updateTree(newTree: BPlusTree, preservePositions: boolean = true): void {
+        if (preservePositions) {
+            // Store current positions as previous positions before updating
+            // Match nodes by ID so animations work even when tree is recreated
+            const currentPositions = this.calculatePositions();
+            const previousById = new Map<number, NodePosition>();
+            
+            for (const [node, pos] of currentPositions) {
+                previousById.set(node.id, pos);
+            }
+            
+            // Convert back to node-based map after tree update
+            this.tree = newTree;
+            const newPositions = this.calculatePositions();
+            this.previousPositions = new Map<BPlusTreeNode, NodePosition>();
+            
+            for (const [node, pos] of newPositions) {
+                const prevPos = previousById.get(node.id);
+                if (prevPos) {
+                    // Create a position with the previous coordinates but current node reference
+                    this.previousPositions.set(node, {
+                        node,
+                        x: prevPos.x,
+                        y: prevPos.y,
+                        width: prevPos.width,
+                        height: prevPos.height
+                    });
+                }
+            }
+        } else {
+            this.tree = newTree;
+        }
         this.resizeCanvas();
     }
 
@@ -135,18 +204,312 @@ export class TreeVisualizer {
         }
     }
 
-    draw(): void {
+    draw(animate: boolean = false): void {
         this.resizeCanvas();
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         if (this.tree.root.keys.length === 0) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.drawEmptyTree();
             return;
         }
 
-        const positions = this.calculatePositions();
-        this.drawConnections(positions);
-        this.drawNodes(positions);
+        const newPositions = this.calculatePositions();
+        
+        if (animate && this.previousPositions.size > 0) {
+            // Start animation
+            this.startAnimation(newPositions);
+        } else {
+            // Draw immediately without animation
+            this.previousPositions = new Map(newPositions);
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.drawConnections(newPositions);
+            this.drawNodes(newPositions);
+        }
+    }
+
+    // Method to set up key promotion animation
+    setKeyPromotionAnimation(key: number, fromNode: BPlusTreeNode, toNode: BPlusTreeNode): void {
+        const fromPos = this.previousPositions.get(fromNode);
+        const toPos = this.previousPositions.get(toNode);
+        
+        if (fromPos && toPos) {
+            // Calculate key positions
+            const fromKeySpacing = fromPos.width / (fromNode.keys.length + 1);
+            const keyIndex = fromNode.keys.indexOf(key);
+            const fromKeyX = fromPos.x - fromPos.width / 2 + (keyIndex + 1) * fromKeySpacing;
+            const fromKeyY = fromPos.y;
+            
+            const toKeySpacing = toPos.width / (toNode.keys.length + 1);
+            const toKeyIndex = toNode.keys.indexOf(key);
+            const toKeyX = toPos.x - toPos.width / 2 + (toKeyIndex + 1) * toKeySpacing;
+            const toKeyY = toPos.y;
+            
+            this.activeAnimations.keyPromotions.push({
+                key,
+                fromNode,
+                toNode,
+                fromX: fromKeyX,
+                fromY: fromKeyY,
+                toX: toKeyX,
+                toY: toKeyY,
+                progress: 0
+            });
+        }
+    }
+
+    // Method to set up node split animation
+    setNodeSplitAnimation(originalNode: BPlusTreeNode, leftNode: BPlusTreeNode, rightNode: BPlusTreeNode): void {
+        const originalPos = this.previousPositions.get(originalNode);
+        if (originalPos) {
+            this.activeAnimations.nodeSplits.push({
+                originalNode,
+                leftNode,
+                rightNode,
+                progress: 0
+            });
+        }
+    }
+
+    private startAnimation(newPositions: Map<BPlusTreeNode, NodePosition>): void {
+        this.animationStartTime = performance.now();
+        this.activeAnimations.positionTransitions = true;
+        
+        const animate = () => {
+            const elapsed = performance.now() - this.animationStartTime;
+            const progress = Math.min(elapsed / this.animationDuration, 1);
+            
+            // Easing function (ease-out)
+            const easedProgress = 1 - Math.pow(1 - progress, 3);
+            
+            // Update animation progress
+            for (const anim of this.activeAnimations.keyPromotions) {
+                anim.progress = easedProgress;
+            }
+            for (const anim of this.activeAnimations.nodeSplits) {
+                anim.progress = easedProgress;
+            }
+            
+            // Calculate interpolated positions
+            const interpolatedPositions = this.interpolatePositions(newPositions, easedProgress);
+            
+            // Clear and redraw
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.drawConnections(interpolatedPositions);
+            this.drawNodes(interpolatedPositions);
+            this.drawAnimations(interpolatedPositions);
+            
+            if (progress < 1) {
+                this.animationFrameId = requestAnimationFrame(animate);
+            } else {
+                // Animation complete
+                this.previousPositions = new Map(newPositions);
+                this.activeAnimations.keyPromotions = [];
+                this.activeAnimations.nodeSplits = [];
+                this.activeAnimations.positionTransitions = false;
+                this.animationFrameId = null;
+                
+                // Final draw without animation
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.drawConnections(newPositions);
+                this.drawNodes(newPositions);
+            }
+        };
+        
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    private interpolatePositions(newPositions: Map<BPlusTreeNode, NodePosition>, progress: number): Map<BPlusTreeNode, NodePosition> {
+        const interpolated = new Map<BPlusTreeNode, NodePosition>();
+        
+        for (const [node, newPos] of newPositions) {
+            const oldPos = this.previousPositions.get(node);
+            
+            if (oldPos && this.activeAnimations.positionTransitions) {
+                // Interpolate position
+                interpolated.set(node, {
+                    node,
+                    x: oldPos.x + (newPos.x - oldPos.x) * progress,
+                    y: oldPos.y + (newPos.y - oldPos.y) * progress,
+                    width: oldPos.width + (newPos.width - oldPos.width) * progress,
+                    height: newPos.height
+                });
+            } else {
+                // No previous position, use new position
+                interpolated.set(node, newPos);
+            }
+        }
+        
+        return interpolated;
+    }
+
+    private drawAnimations(positions: Map<BPlusTreeNode, NodePosition>): void {
+        // Draw key promotion animations
+        for (const anim of this.activeAnimations.keyPromotions) {
+            const currentX = anim.fromX + (anim.toX - anim.fromX) * anim.progress;
+            const currentY = anim.fromY + (anim.toY - anim.fromY) * anim.progress;
+            
+            // Draw animated key
+            this.ctx.save();
+            this.ctx.font = 'bold 14px Inter, Arial, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // Draw glow effect
+            const gradient = this.ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, 25);
+            gradient.addColorStop(0, 'rgba(245, 158, 11, 0.9)');
+            gradient.addColorStop(1, 'rgba(245, 158, 11, 0.2)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(currentX, currentY, 25, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Draw key circle
+            this.ctx.fillStyle = '#fbbf24';
+            this.ctx.beginPath();
+            this.ctx.arc(currentX, currentY, 22, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Draw key text
+            this.ctx.fillStyle = '#0f172a';
+            this.ctx.fillText(anim.key.toString(), currentX, currentY);
+            this.ctx.restore();
+        }
+        
+        // Draw node split animations
+        for (const anim of this.activeAnimations.nodeSplits) {
+            const leftPos = positions.get(anim.leftNode);
+            const rightPos = positions.get(anim.rightNode);
+            const originalPos = this.previousPositions.get(anim.originalNode);
+            
+            if (leftPos && rightPos && originalPos) {
+                // Calculate split positions
+                const leftX = originalPos.x + (leftPos.x - originalPos.x) * anim.progress;
+                const leftY = originalPos.y + (leftPos.y - originalPos.y) * anim.progress;
+                const rightX = originalPos.x + (rightPos.x - originalPos.x) * anim.progress;
+                const rightY = originalPos.y + (rightPos.y - originalPos.y) * anim.progress;
+                
+                const leftWidth = originalPos.width + (leftPos.width - originalPos.width) * anim.progress;
+                const rightWidth = originalPos.width + (rightPos.width - originalPos.width) * anim.progress;
+                
+                // Draw left node (fading out original, fading in new)
+                const leftAlpha = anim.progress;
+                this.drawNodeAtPosition(anim.leftNode, {
+                    node: anim.leftNode,
+                    x: leftX,
+                    y: leftY,
+                    width: leftWidth,
+                    height: leftPos.height
+                }, leftAlpha);
+                
+                // Draw right node
+                const rightAlpha = anim.progress;
+                this.drawNodeAtPosition(anim.rightNode, {
+                    node: anim.rightNode,
+                    x: rightX,
+                    y: rightY,
+                    width: rightWidth,
+                    height: rightPos.height
+                }, rightAlpha);
+                
+                // Draw original node fading out
+                if (anim.progress < 1) {
+                    const originalAlpha = 1 - anim.progress;
+                    this.drawNodeAtPosition(anim.originalNode, originalPos, originalAlpha);
+                }
+            }
+        }
+    }
+
+    private drawNodeAtPosition(node: BPlusTreeNode, pos: NodePosition, alpha: number = 1): void {
+        const isHighlighted = this.highlightedNode === node || this.highlightedNodes.includes(node);
+        const theme = this.getTheme();
+        
+        this.ctx.save();
+        this.ctx.globalAlpha = alpha;
+        
+        // Draw node background
+        if (isHighlighted) {
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.2)';
+            this.ctx.strokeStyle = '#f59e0b';
+            this.ctx.lineWidth = 3;
+        } else if (node.isLeaf) {
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)';
+            this.ctx.strokeStyle = theme === 'light' ? 'rgba(16, 185, 129, 0.7)' : 'rgba(16, 185, 129, 0.6)';
+            this.ctx.lineWidth = 2;
+        } else {
+            this.ctx.fillStyle = theme === 'light' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)';
+            this.ctx.strokeStyle = theme === 'light' ? 'rgba(99, 102, 241, 0.7)' : 'rgba(99, 102, 241, 0.6)';
+            this.ctx.lineWidth = 2;
+        }
+        
+        // Draw rounded rectangle
+        const x = pos.x - pos.width / 2;
+        const y = pos.y - pos.height / 2;
+        const w = pos.width;
+        const h = pos.height;
+        const r = 8;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + r, y);
+        this.ctx.lineTo(x + w - r, y);
+        this.ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.ctx.lineTo(x + w, y + h - r);
+        this.ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.ctx.lineTo(x + r, y + h);
+        this.ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.ctx.lineTo(x, y + r);
+        this.ctx.quadraticCurveTo(x, y, x + r, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Draw keys
+        const keySpacing = pos.width / (node.keys.length + 1);
+        this.ctx.font = 'bold 14px Inter, Arial, sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        for (let i = 0; i < node.keys.length; i++) {
+            const key = node.keys[i];
+            const keyX = pos.x - pos.width / 2 + (i + 1) * keySpacing;
+            const keyY = pos.y;
+            
+            const isKeyHighlighted = this.highlightedKey === key || this.highlightedKeys.includes(key);
+            
+            if (isKeyHighlighted) {
+                const gradient = this.ctx.createRadialGradient(keyX, keyY, 0, keyX, keyY, 20);
+                gradient.addColorStop(0, 'rgba(245, 158, 11, 0.8)');
+                gradient.addColorStop(1, 'rgba(245, 158, 11, 0.3)');
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(keyX, keyY, 20, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#fbbf24';
+                this.ctx.beginPath();
+                this.ctx.arc(keyX, keyY, 18, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            if (isKeyHighlighted) {
+                this.ctx.fillStyle = '#0f172a';
+            } else {
+                this.ctx.fillStyle = this.getTextColor();
+            }
+            this.ctx.fillText(key.toString(), keyX, keyY);
+        }
+        
+        // Draw node type label
+        this.ctx.font = '10px Inter, Arial, sans-serif';
+        this.ctx.fillStyle = this.getMutedTextColor();
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(
+            node.isLeaf ? t('leaf', this.language) : t('internal', this.language),
+            pos.x - pos.width / 2 + 5,
+            pos.y - pos.height / 2 + 12
+        );
+        
+        this.ctx.restore();
     }
 
     private drawEmptyTree(): void {
