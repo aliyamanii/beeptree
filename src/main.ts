@@ -337,69 +337,60 @@ class BPlusTreeSimulator {
                     this.tree = restoredTree;
                     this.visualizer = new TreeVisualizer(this.canvas, this.tree, this.currentLanguage);
                     
-                    // Find corresponding nodes in the restored tree
+                    // Find corresponding nodes in the restored tree using IDs
                     let restoredCurrentNode: BPlusTreeNode | null = null;
                     const restoredHighlightedNodes: BPlusTreeNode[] = [];
                     
-                    // Find current node in restored tree
-                    if (currentStep.currentNode) {
-                        // Check if it's the root (root has no parent or is the tree root)
-                        const wasRoot = !currentStep.currentNode.parent || 
-                                       currentStep.currentNode === restoredTree.root ||
-                                       (currentStep.currentNode.keys.length === restoredTree.root.keys.length &&
-                                        currentStep.currentNode.keys.every((k, i) => k === restoredTree.root.keys[i]));
-                        
-                        if (wasRoot) {
-                            restoredCurrentNode = TreeStateManager.findRoot(restoredTree);
-                        } else {
-                            restoredCurrentNode = TreeStateManager.findNodeByKeys(restoredTree, currentStep.currentNode.keys);
+                    // Find current node in restored tree by ID
+                    if (currentStep.currentNodeId !== null) {
+                        restoredCurrentNode = TreeStateManager.findNodeById(restoredTree, currentStep.currentNodeId);
+                    }
+                    
+                    // Find highlighted nodes in restored tree by IDs
+                    for (const nodeId of currentStep.highlightedNodeIds) {
+                        const found = TreeStateManager.findNodeById(restoredTree, nodeId);
+                        if (found && !restoredHighlightedNodes.includes(found)) {
+                            restoredHighlightedNodes.push(found);
                         }
                     }
                     
-                    // Find highlighted nodes in restored tree
-                    for (const node of currentStep.highlightedNodes) {
-                        if (node && node.keys.length > 0) {
-                            // Check if it's the root
-                            const wasRoot = !node.parent || 
-                                           (node.keys.length === restoredTree.root.keys.length &&
-                                            node.keys.every((k, i) => k === restoredTree.root.keys[i]));
-                            
-                            let found: BPlusTreeNode | null = null;
-                            if (wasRoot) {
-                                found = TreeStateManager.findRoot(restoredTree);
-                            } else {
-                                found = TreeStateManager.findNodeByKeys(restoredTree, node.keys);
-                            }
-                            
-                            if (found && !restoredHighlightedNodes.includes(found)) {
-                                restoredHighlightedNodes.push(found);
+                    // Fallback to old method if IDs are not available (backward compatibility)
+                    if (!restoredCurrentNode && currentStep.currentNode) {
+                        restoredCurrentNode = TreeStateManager.findNodeByKeys(restoredTree, currentStep.currentNode.keys);
+                    }
+                    if (restoredHighlightedNodes.length === 0 && currentStep.highlightedNodes) {
+                        for (const node of currentStep.highlightedNodes) {
+                            if (node && node.keys.length > 0) {
+                                const found = TreeStateManager.findNodeByKeys(restoredTree, node.keys);
+                                if (found && !restoredHighlightedNodes.includes(found)) {
+                                    restoredHighlightedNodes.push(found);
+                                }
                             }
                         }
                     }
                     
-                    // CRITICAL: Always ensure current node is in highlighted nodes
-                    // This ensures nodes mentioned in step descriptions are highlighted
+                    // Prioritize currentNode - it's the main focus of the step
+                    // Use currentNode as the primary highlight, add other highlightedNodes as secondary
+                    const finalHighlightedNodes: BPlusTreeNode[] = [];
                     if (restoredCurrentNode) {
-                        if (!restoredHighlightedNodes.includes(restoredCurrentNode)) {
-                            restoredHighlightedNodes.push(restoredCurrentNode);
-                        }
-                    } else if (currentStep.currentNode && currentStep.currentNode.keys.length > 0) {
-                        // If we couldn't find the current node, try to find it again
-                        // This is important for steps like "Reached leaf node with keys [...]"
-                        const found = TreeStateManager.findNodeByKeys(restoredTree, currentStep.currentNode.keys);
-                        if (found) {
-                            restoredCurrentNode = found;
-                            if (!restoredHighlightedNodes.includes(found)) {
-                                restoredHighlightedNodes.push(found);
+                        // currentNode is the primary highlight (e.g., the child being followed)
+                        finalHighlightedNodes.push(restoredCurrentNode);
+                        // Add other highlighted nodes that aren't the current node
+                        for (const node of restoredHighlightedNodes) {
+                            if (node !== restoredCurrentNode && !finalHighlightedNodes.includes(node)) {
+                                finalHighlightedNodes.push(node);
                             }
                         }
+                    } else {
+                        // Fallback to highlightedNodes if currentNode not found
+                        finalHighlightedNodes.push(...restoredHighlightedNodes);
                     }
                     
                     // Update visualization with restored nodes
                     this.visualizer.clearHighlights();
                     this.visualizer.setHighlightedNode(restoredCurrentNode);
                     this.visualizer.setHighlightedKey(currentStep.currentKey);
-                    this.visualizer.setHighlightedNodes(restoredHighlightedNodes);
+                    this.visualizer.setHighlightedNodes(finalHighlightedNodes);
                     this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
                     this.visualizer.draw();
                 } catch (error) {
@@ -407,10 +398,29 @@ class BPlusTreeSimulator {
                 }
             } else {
                 // No tree state, use original node references
+                // Prioritize currentNode - it's the main focus of the step
+                const finalHighlightedNodes: BPlusTreeNode[] = [];
+                
+                if (currentStep.currentNode) {
+                    // currentNode is the primary highlight
+                    finalHighlightedNodes.push(currentStep.currentNode);
+                    // Add other highlighted nodes that aren't the current node
+                    if (currentStep.highlightedNodes && currentStep.highlightedNodes.length > 0) {
+                        for (const node of currentStep.highlightedNodes) {
+                            if (node !== currentStep.currentNode && !finalHighlightedNodes.includes(node)) {
+                                finalHighlightedNodes.push(node);
+                            }
+                        }
+                    }
+                } else if (currentStep.highlightedNodes && currentStep.highlightedNodes.length > 0) {
+                    // Fallback to highlightedNodes if currentNode doesn't exist
+                    finalHighlightedNodes.push(...currentStep.highlightedNodes);
+                }
+                
                 this.visualizer.clearHighlights();
-                this.visualizer.setHighlightedNode(currentStep.currentNode);
-                this.visualizer.setHighlightedKey(currentStep.currentKey);
-                this.visualizer.setHighlightedNodes(currentStep.highlightedNodes);
+                this.visualizer.setHighlightedNode(currentStep.currentNode ?? null);
+                this.visualizer.setHighlightedKey(currentStep.currentKey ?? null);
+                this.visualizer.setHighlightedNodes(finalHighlightedNodes);
                 this.visualizer.setHighlightedKeys(currentStep.highlightedKeys);
                 this.visualizer.draw();
             }

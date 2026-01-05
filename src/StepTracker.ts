@@ -3,12 +3,15 @@ import { BPlusTreeNode } from './BPlusTree.js';
 export interface OperationStep {
     stepNumber: number;
     description: string;
-    currentNode: BPlusTreeNode | null;
+    currentNodeId: number | null; // Store node ID instead of reference
     currentKey: number | null;
-    highlightedNodes: BPlusTreeNode[];
+    highlightedNodeIds: number[]; // Store node IDs instead of references
     highlightedKeys: number[];
     treeState: string; // JSON representation of tree state at this step
     treeOrder: number; // Tree order needed for deserialization
+    // Keep these for backward compatibility during transition
+    currentNode?: BPlusTreeNode | null;
+    highlightedNodes?: BPlusTreeNode[];
 }
 
 export class StepTracker {
@@ -27,12 +30,15 @@ export class StepTracker {
         const step: OperationStep = {
             stepNumber: this.steps.length + 1,
             description,
-            currentNode,
+            currentNodeId: currentNode?.id ?? null,
             currentKey,
-            highlightedNodes: [...highlightedNodes],
+            highlightedNodeIds: highlightedNodes.map(n => n.id),
             highlightedKeys: [...highlightedKeys],
             treeState,
-            treeOrder
+            treeOrder,
+            // Keep references for backward compatibility
+            currentNode,
+            highlightedNodes: [...highlightedNodes]
         };
         this.steps.push(step);
     }

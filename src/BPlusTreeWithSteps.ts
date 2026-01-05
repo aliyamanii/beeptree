@@ -26,7 +26,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
         const nodeMap = new Map<BPlusTreeNode, BPlusTreeNode>();
         
         const copyNode = (node: BPlusTreeNode): BPlusTreeNode => {
-            const newNode = new BPlusTreeNode(node.isLeaf);
+            const newNode = new BPlusTreeNode(node.isLeaf, node.id);
             newNode.keys = [...node.keys];
             nodeMap.set(node, newNode);
             
@@ -107,9 +107,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
         const state2 = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
             t('foundLeafBeforeInsertion', this.language, { keys: leaf.keys.join(', '), key: key.toString() }),
-            leaf,
+            leaf, // currentNode is the leaf being mentioned
             key,
-            [leaf],
+            [leaf], // Highlight the leaf node
             [],
             state2,
             this.order
@@ -166,7 +166,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
             this.root,
             key,
             [this.root],
-            []
+            [],
+            '', // No tree state for search steps
+            0
         );
 
         let node = this.root;
@@ -185,16 +187,22 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 comparisonText += `Comparing ${key} < ${node.keys[i]} → true. `;
             }
             
+            // Get the child node that will be followed
+            const childNode = node.children[i] as BPlusTreeNode;
+            
             const childDesc = i === 0 ? t('leftmost', this.language) : t('afterKey', this.language, { key: node.keys[i - 1].toString() });
+            // Highlight the child node that is being followed (the focus of "Following child X")
             this.stepTracker.addStep(
                 t('atInternalNode', this.language, { keys: node.keys.join(', ') }) + '. ' + comparisonText + t('followingChild', this.language, { index: i.toString() }) + ' (' + childDesc + ').',
-                node,
+                childNode, // currentNode is the child being followed (the focus of this step)
                 key,
-                [node],
-                node.keys.length > 0 ? [node.keys[Math.min(i, node.keys.length - 1)]] : []
+                [childNode], // Highlight the child node that is being followed
+                [],
+                '', // No tree state for search steps
+                0
             );
 
-            node = node.children[i] as BPlusTreeNode;
+            node = childNode;
             stepCount++;
         }
 
@@ -205,7 +213,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 node,
                 key,
                 [node],
-                [key]
+                [key],
+                '', // No tree state for search steps
+                0
             );
         } else {
             this.stepTracker.addStep(
@@ -213,7 +223,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 node,
                 key,
                 [node],
-                []
+                [],
+                '', // No tree state for search steps
+                0
             );
         }
 
@@ -229,26 +241,30 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 i++;
             }
             
+            // Get the child node that will be followed
+            const childNode = node.children[i] as BPlusTreeNode;
+            
             const state = TreeStateManager.serializeTree(this);
+            // Highlight the child node that is being followed (the focus of "Following child X")
             this.stepTracker.addStep(
                 t('atInternalNode', this.language, { keys: node.keys.join(', ') }) + '. ' + t('comparing', this.language, { key: key.toString() }) + '. ' + t('followingChild', this.language, { index: i.toString() }) + '.',
-                node,
+                childNode, // currentNode is the child being followed (the focus of this step)
                 key,
-                [node],
-                node.keys.length > 0 ? [node.keys[Math.min(i, node.keys.length - 1)]] : [],
+                [childNode], // Highlight the child node that is being followed
+                [],
                 state,
                 this.order
             );
             
-            node = node.children[i] as BPlusTreeNode;
+            node = childNode;
         }
         
         const state = TreeStateManager.serializeTree(this);
         this.stepTracker.addStep(
             t('reachedLeafNode', this.language, { keys: node.keys.join(', ') }),
-            node,
+            node, // currentNode is the leaf being mentioned
             key,
-            [node],
+            [node], // Highlight the leaf node
             [],
             state,
             this.order
@@ -311,23 +327,27 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 this.order
             );
             } else {
-                // Remove newLeaf if it was temporarily added
+                // Ensure newLeaf is in the tree for the step visualization
+                // It was temporarily added above, keep it there for now
                 const tempNewLeafIndex = leaf.parent.children.indexOf(newLeaf);
-                if (tempNewLeafIndex !== -1) {
-                    leaf.parent.children.splice(tempNewLeafIndex, 1);
-                }
+                const wasTemporarilyAdded = tempNewLeafIndex !== -1;
                 
-                // Use standard insertIntoInternal algorithm
+                // Serialize tree state with newLeaf still in the tree (if it was added)
                 const stateBeforePromote = TreeStateManager.serializeTree(this);
                 this.stepTracker.addStep(
                     t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: leaf.parent.keys.join(', ') }),
-                    leaf.parent,
+                    leaf.parent, // Highlight the parent node that will receive the promoted key
                     promoteKey,
-                    [leaf.parent, leaf, newLeaf],
+                    [leaf.parent, newLeaf], // Highlight parent and the new leaf (which contains the promoted key)
                     [promoteKey],
                     stateBeforePromote,
                     this.order
                 );
+                
+                // Now remove newLeaf if it was temporarily added (insertIntoInternalWithSteps will add it properly)
+                if (wasTemporarilyAdded && tempNewLeafIndex !== -1) {
+                    leaf.parent.children.splice(tempNewLeafIndex, 1);
+                }
                 
                 this.insertIntoInternalWithSteps(leaf.parent, promoteKey, newLeaf);
             }

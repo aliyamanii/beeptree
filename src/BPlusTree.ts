@@ -1,12 +1,15 @@
 export class BPlusTreeNode {
+    private static nextId: number = 1;
+    id: number;
     keys: number[] = [];
     children: (BPlusTreeNode | number)[] = [];
     isLeaf: boolean;
     parent: BPlusTreeNode | null = null;
     next: BPlusTreeNode | null = null; // For leaf nodes
 
-    constructor(isLeaf: boolean = false) {
+    constructor(isLeaf: boolean = false, id?: number) {
         this.isLeaf = isLeaf;
+        this.id = id !== undefined ? id : BPlusTreeNode.nextId++;
     }
 }
 

@@ -1,7 +1,25 @@
 import { BPlusTreeNode, BPlusTree } from './BPlusTree.js';
 
 export class TreeStateManager {
-    // Find a node in the tree by matching its keys
+    // Find a node in the tree by its ID
+    static findNodeById(tree: BPlusTree, nodeId: number): BPlusTreeNode | null {
+        const search = (node: BPlusTreeNode): BPlusTreeNode | null => {
+            if (node.id === nodeId) {
+                return node;
+            }
+            if (!node.isLeaf) {
+                for (const child of node.children) {
+                    const found = search(child as BPlusTreeNode);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        return search(tree.root);
+    }
+
+    // Find a node in the tree by matching its keys (fallback for compatibility)
     static findNodeByKeys(tree: BPlusTree, targetKeys: number[]): BPlusTreeNode | null {
         if (targetKeys.length === 0) return null;
         
@@ -58,6 +76,7 @@ export class TreeStateManager {
     static serializeTree(tree: BPlusTree): string {
         const serializeNode = (node: BPlusTreeNode): any => {
             const serialized: any = {
+                id: node.id,
                 isLeaf: node.isLeaf,
                 keys: [...node.keys],
                 children: []
@@ -83,7 +102,7 @@ export class TreeStateManager {
         const tree = new BPlusTree(order);
         
         const deserializeNode = (nodeData: any, parent: BPlusTreeNode | null = null): BPlusTreeNode => {
-            const node = new BPlusTreeNode(nodeData.isLeaf);
+            const node = new BPlusTreeNode(nodeData.isLeaf, nodeData.id);
             node.keys = [...nodeData.keys];
             node.parent = parent;
             
