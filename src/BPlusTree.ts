@@ -79,14 +79,17 @@ export class BPlusTree {
     }
 
     protected splitLeaf(leaf: BPlusTreeNode): void {
+        // Split point: ceil(order/2) - this ensures left node has at least ceil(order/2) keys
         const mid = Math.ceil(this.order / 2);
         const newLeaf = new BPlusTreeNode(true);
         
+        // Move keys from mid onwards to new leaf
         newLeaf.keys = leaf.keys.splice(mid);
         newLeaf.parent = leaf.parent;
         newLeaf.next = leaf.next;
         leaf.next = newLeaf;
 
+        // The first key of the new leaf is promoted to parent
         const promoteKey = newLeaf.keys[0];
 
         if (leaf.parent === null) {
@@ -98,34 +101,50 @@ export class BPlusTree {
             newLeaf.parent = newRoot;
             this.root = newRoot;
         } else {
+            // Insert promoted key into parent using standard algorithm
             this.insertIntoInternal(leaf.parent, promoteKey, newLeaf);
         }
     }
 
     protected insertIntoInternal(node: BPlusTreeNode, key: number, rightChild: BPlusTreeNode): void {
+        // Find the correct position to insert the key (maintain sorted order)
         let i = 0;
         while (i < node.keys.length && node.keys[i] < key) {
             i++;
         }
+        
+        // Insert key at position i
         node.keys.splice(i, 0, key);
+        
+        // Insert rightChild at position i + 1
+        // The left child (at position i) should already be in the correct position
+        // This is because when we split a leaf, the original leaf is already at children[i]
         node.children.splice(i + 1, 0, rightChild);
         rightChild.parent = node;
 
+        // Check if node overflowed
         if (node.keys.length > this.order - 1) {
             this.splitInternal(node);
         }
     }
 
     protected splitInternal(node: BPlusTreeNode): void {
+        // Split point: floor(order/2) - the key at this position is promoted
         const mid = Math.floor(this.order / 2);
         const promoteKey = node.keys[mid];
         const newInternal = new BPlusTreeNode(false);
         
+        // Move keys from mid+1 onwards to new internal node
         newInternal.keys = node.keys.splice(mid + 1);
+        // Remove the promoted key (at position mid) from the original node
+        node.keys.splice(mid, 1);
+        
+        // Move children from mid+1 onwards to new internal node
+        // Note: children[mid+1] is the right child of promoteKey
         newInternal.children = node.children.splice(mid + 1);
         newInternal.parent = node.parent;
 
-        // Update parent references
+        // Update parent references for all children moved to newInternal
         for (const child of newInternal.children) {
             (child as BPlusTreeNode).parent = newInternal;
         }
@@ -139,6 +158,7 @@ export class BPlusTree {
             newInternal.parent = newRoot;
             this.root = newRoot;
         } else {
+            // Insert promoted key into parent
             this.insertIntoInternal(node.parent, promoteKey, newInternal);
         }
     }

@@ -230,16 +230,22 @@ export class TreeVisualizer {
                     const child = node.children[i] as BPlusTreeNode;
                     const childPos = positions.get(child);
                     if (childPos) {
+                        // Nodes are centered at pos.x, pos.y
+                        // Top edge: pos.y - pos.height / 2
+                        // Bottom edge: pos.y + pos.height / 2
+                        // Left edge: pos.x - pos.width / 2
+                        // Right edge: pos.x + pos.width / 2
+                        
+                        // Start from center bottom of parent node (exact bottom edge)
                         const startX = pos.x;
                         const startY = pos.y + pos.height / 2;
+                        // End at center top of child node (exact top edge)
                         const endX = childPos.x;
-                        const endY = childPos.y;
+                        const endY = childPos.y - childPos.height / 2;
                         
-                        // Draw line
+                        // Draw straight diagonal line
                         this.ctx.beginPath();
                         this.ctx.moveTo(startX, startY);
-                        this.ctx.lineTo(startX, startY + this.verticalSpacing / 2);
-                        this.ctx.lineTo(endX, startY + this.verticalSpacing / 2);
                         this.ctx.lineTo(endX, endY);
                         this.ctx.stroke();
                     }

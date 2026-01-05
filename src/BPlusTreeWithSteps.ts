@@ -310,30 +310,27 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 stateAfterRoot,
                 this.order
             );
-        } else {
-            // Capture state with newLeaf still in parent's children (so it's visible in the tree)
-            const stateBeforePromote = TreeStateManager.serializeTree(this);
-            this.stepTracker.addStep(
-                t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: leaf.parent.keys.join(', ') }),
-                leaf.parent,
-                promoteKey,
-                [leaf.parent, leaf, newLeaf],
-                [promoteKey],
-                stateBeforePromote,
-                this.order
-            );
-            
-            // Now remove newLeaf from parent's children (insertIntoInternal will add it at the correct position)
-            const leafIndex = leaf.parent.children.indexOf(leaf);
-            if (leafIndex !== -1) {
-                const newLeafIndex = leaf.parent.children.indexOf(newLeaf);
-                if (newLeafIndex !== -1) {
-                    leaf.parent.children.splice(newLeafIndex, 1);
+            } else {
+                // Remove newLeaf if it was temporarily added
+                const tempNewLeafIndex = leaf.parent.children.indexOf(newLeaf);
+                if (tempNewLeafIndex !== -1) {
+                    leaf.parent.children.splice(tempNewLeafIndex, 1);
                 }
+                
+                // Use standard insertIntoInternal algorithm
+                const stateBeforePromote = TreeStateManager.serializeTree(this);
+                this.stepTracker.addStep(
+                    t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: leaf.parent.keys.join(', ') }),
+                    leaf.parent,
+                    promoteKey,
+                    [leaf.parent, leaf, newLeaf],
+                    [promoteKey],
+                    stateBeforePromote,
+                    this.order
+                );
+                
+                this.insertIntoInternalWithSteps(leaf.parent, promoteKey, newLeaf);
             }
-            
-            this.insertIntoInternalWithSteps(leaf.parent, promoteKey, newLeaf);
-        }
     }
 
     private insertIntoInternalWithSteps(node: BPlusTreeNode, key: number, rightChild: BPlusTreeNode): void {
@@ -430,7 +427,13 @@ export class BPlusTreeWithSteps extends BPlusTree {
         const promoteKey = node.keys[mid];
         const newInternal = new BPlusTreeNode(false);
         
+        // Move keys from mid+1 onwards to new internal node
         newInternal.keys = node.keys.splice(mid + 1);
+        // Remove the promoted key (at position mid) from the original node
+        node.keys.splice(mid, 1);
+        
+        // Move children from mid+1 onwards to new internal node
+        // Note: children[mid+1] is the right child of promoteKey
         newInternal.children = node.children.splice(mid + 1);
         newInternal.parent = node.parent;
 
