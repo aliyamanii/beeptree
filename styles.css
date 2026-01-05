@@ -103,6 +103,7 @@
 [data-theme="light"] #last-step-btn {
     background: rgba(241, 245, 249, 0.8);
     border-color: rgba(148, 163, 184, 0.3);
+    color: var(--text-primary);
 }
 
 [data-theme="light"] #first-step-btn:hover, 
@@ -110,6 +111,7 @@
 [data-theme="light"] #next-step-btn:hover, 
 [data-theme="light"] #last-step-btn:hover {
     background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary);
 }
 
 * {
@@ -566,6 +568,10 @@ button:disabled {
     font-weight: 600;
     color: var(--primary-light);
     letter-spacing: 0.02em;
+}
+
+[data-theme="light"] .step-info {
+    color: var(--primary);
 }
 
 .step-buttons {

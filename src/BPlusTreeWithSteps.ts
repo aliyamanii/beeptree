@@ -259,17 +259,7 @@ export class BPlusTreeWithSteps extends BPlusTree {
             node = childNode;
         }
         
-        const state = TreeStateManager.serializeTree(this);
-        this.stepTracker.addStep(
-            t('reachedLeafNode', this.language, { keys: node.keys.join(', ') }),
-            node, // currentNode is the leaf being mentioned
-            key,
-            [node], // Highlight the leaf node
-            [],
-            state,
-            this.order
-        );
-        
+        // Don't create a step here - it will be created in insertWithSteps as "Found leaf node"
         return node;
     }
 
@@ -332,19 +322,8 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 const tempNewLeafIndex = leaf.parent.children.indexOf(newLeaf);
                 const wasTemporarilyAdded = tempNewLeafIndex !== -1;
                 
-                // Serialize tree state with newLeaf still in the tree (if it was added)
-                const stateBeforePromote = TreeStateManager.serializeTree(this);
-                this.stepTracker.addStep(
-                    t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: leaf.parent.keys.join(', ') }),
-                    leaf.parent, // Highlight the parent node that will receive the promoted key
-                    promoteKey,
-                    [leaf.parent, newLeaf], // Highlight parent and the new leaf (which contains the promoted key)
-                    [promoteKey],
-                    stateBeforePromote,
-                    this.order
-                );
-                
                 // Now remove newLeaf if it was temporarily added (insertIntoInternalWithSteps will add it properly)
+                // Don't create a step here - insertIntoInternalWithSteps will create a more detailed step
                 if (wasTemporarilyAdded && tempNewLeafIndex !== -1) {
                     leaf.parent.children.splice(tempNewLeafIndex, 1);
                 }
@@ -533,20 +512,9 @@ export class BPlusTreeWithSteps extends BPlusTree {
                 this.order
             );
             
-            // Capture state before promoting
-            const stateBeforePromote = TreeStateManager.serializeTree(this);
-            this.stepTracker.addStep(
-                t('insertingPromotedKey', this.language, { key: promoteKey.toString(), keys: node.parent.keys.join(', ') }),
-                node.parent,
-                promoteKey,
-                [node.parent, node, newInternal],
-                [promoteKey],
-                stateBeforePromote,
-                this.order
-            );
-            
             // Remove newInternal from parent's children (insertIntoInternal will add it at the correct position)
             // Only remove if we added it above
+            // Don't create a step here - insertIntoInternalWithSteps will create a more detailed step
             if (!alreadyInParent) {
                 const newInternalIndex = node.parent.children.indexOf(newInternal);
                 if (newInternalIndex !== -1) {

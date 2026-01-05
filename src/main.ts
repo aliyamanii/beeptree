@@ -312,6 +312,7 @@ class BPlusTreeSimulator {
         this.currentStepTracker = null;
         this.updateTipText(); // Restore tip text to original
         this.visualizer.clearHighlights();
+        this.visualizer.draw(); // Redraw to remove highlights from canvas
     }
 
     private updateStepDisplay(): void {
